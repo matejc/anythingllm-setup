@@ -1,0 +1,58 @@
+version: "3.9"
+
+name: anythingllm
+
+services:
+
+  proxy_to_host:
+    networks:
+      - no-internet
+      - internet
+    links:
+      - anything-llm:allm
+    image: alpine/socat
+    command: TCP-LISTEN:3001,fork,bind=0.0.0.0 TCP4:allm:3001
+    ports:
+      - "3001:3001"
+
+  # ollama:
+  #   networks:
+  #     - no-internet
+  #     - internet
+  #   image: alpine/socat
+  #   command: TCP4-LISTEN:11434,fork,bind=0.0.0.0 TCP4:host.docker.internal:11434
+  #   extra_hosts:
+  #     - host.docker.internal:host-gateway
+
+  anything-llm:
+    image: mintplexlabs/anythingllm:latest
+    volumes:
+      - "./storage:/app/server/storage"
+      - ".env:/app/server/.env"
+      - "./collector/hotdir/:/app/collector/hotdir"
+      - "./collector/outputs/:/app/collector/outputs"
+    user: "1000:1000"
+    networks:
+      - no-internet
+      # - internet
+    links:
+      - ollama:ollama
+    env_file:
+      - .env
+    security_opt:
+      - label=disable
+    cap_add:
+      - SYS_ADMIN
+
+  ollama:
+    image: ollama/ollama
+    networks:
+      - no-internet
+      # - internet
+    volumes:
+      - "./ollama:/root/.ollama"
+
+networks:
+  internet: {}
+  no-internet:
+    internal: true
